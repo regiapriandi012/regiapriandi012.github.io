@@ -289,136 +289,113 @@ hr{border:0;height:0;border-top:1px solid #DAE1E9;}/*!sc*/
 .js-focus-visible :focus:not(.focus-visible){outline:none;}/*!sc*/
 .js-focus-visible .focus-visible{outline-color:#0366d6;outline-offset:-1px;}/*!sc*/
 data-styled.g25[id="sc-global-iPEwMa1"]{content:"sc-global-iPEwMa1,"}/*!sc*/
-.jbFXLn{max-width:46em;margin:0 auto;padding:0 1em;}/*!sc*/
-data-styled.g26[id="sc-aXZVg"]{content:"jbFXLn,"}/*!sc*/
 @-webkit-keyframes jhca-dJ{0%{box-shadow:0 0 0 1px rgba(255,213,0,0.75);}50%{box-shadow:0 0 0 4px rgba(255,213,0,0.75);}100%{box-shadow:0 0 0 1px rgba(255,213,0,0.75);}}/*!sc*/
 @keyframes jhca-dJ{0%{box-shadow:0 0 0 1px rgba(255,213,0,0.75);}50%{box-shadow:0 0 0 4px rgba(255,213,0,0.75);}100%{box-shadow:0 0 0 1px rgba(255,213,0,0.75);}}/*!sc*/
 data-styled.g27[id="sc-keyframes-jhca-dJ"]{content:"jhca-dJ,"}/*!sc*/
-</style></head><body><article class="sc-aXZVg jbFXLn"><h1 dir="ltr">Configure site-to-site VPN on VyOS</h1><div dir="ltr" class="Styles__EditorContainer-sc-1ggx691-0 hvDZkC"><div id="content" class="ProseMirror"><div class="notice-block info"><div class="content"><p>Tech Stack</p></div></div><ul><li><p>VyOS 1.4-rolling</p></li></ul><p></p><div class="notice-block warning"><div class="content"><p>Common Problems</p></div></div><ul><li><p>Strongswan VPN: no matching peer config found, Solve: <a href="https://serverfault.com/questions/746261/strongswan-vpn-no-matching-peer-config-found#:~:text=Yes%20please%20add%20this%20as%20an%20answer%2C%20as%20this%20just%20helped%20me%20as%20well.%20The%20%22Remote%20ID%22%20in%20the%20iOS%20config%20was%20the%20key.%20Thank%20you!" class="use-hover-preview" rel="noopener noreferrer nofollow">https://serverfault.com/questions/746261/strongswan-vpn-no-matching-peer-config-found#:~:text=Yes%20please%20add%20this%20as%20an%20answer%2C%20as%20this%20just%20helped%20me%20as%20well.%20The%20%22Remote%20ID%22%20in%20the%20iOS%20config%20was%20the%20key.%20Thank%20you!</a></p></li></ul><p></p><div class="notice-block success"><div class="content"><p>Topology</p></div></div><p><div class="image"><img src="https://s3.regiapriandi.com/outline-bucket/public/782b2627-cd78-4530-a037-b024fb95bd5f/7843f948-12a0-408c-a400-4196b406a7d1/image.png?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=minio%2F20240108%2Fus-east-1%2Fs3%2Faws4_request&X-Amz-Date=20240108T044519Z&X-Amz-Expires=3000&X-Amz-Signature=9c863d8ac7cee91f6cbe1d997850261378bb25e19648d6090fc9752d30bab45f&X-Amz-SignedHeaders=host&response-content-disposition=attachment" contenteditable="false"><p class="caption"></p></div></p><p></p><h2><span contenteditable="false" class="heading-actions "></span><span class="heading-content">Configure Interface</span></h2><p>The first step is that we can create an address on each interface, for the eth0 interface we can attach a public IP to the digital ocean droplet, and on the eth1 interface, we can attach a private IP droplet, namely by setting a DHCP address on each interface.</p><div class="code-block with-line-numbers" data-language="javascript"><pre><code spellcheck="false">vyos@vyos# set interfaces ethernet eth0 address dhcp
-vyos@vyos# set interfaces ethernet eth1 address dhcp
-vyos@vyos# commit
-vyos@vyos# save</code></pre></div><p></p><p>Interface on SGP1 region</p><div class="code-block with-line-numbers" data-language="javascript"><pre><code spellcheck="false">vyos@vyos# run show interfaces
-Codes: S - State, L - Link, u - Up, D - Down, A - Admin Down
-Interface        IP Address                        S/L  Description
----------        ----------                        ---  -----------
-eth0             159.223.59.74/20                  u/u
-eth1             10.104.0.3/20                     u/u
-lo               127.0.0.1/8                       u/u
-                 ::1/128</code></pre></div><p></p><p>Interface on NYC3 region</p><div class="code-block with-line-numbers" data-language="javascript"><pre><code spellcheck="false">vyos@vyos# run show interfaces
-Codes: S - State, L - Link, u - Up, D - Down, A - Admin Down
-Interface        IP Address                        S/L  Description
----------        ----------                        ---  -----------
-eth0             134.209.174.36/20                 u/u
-eth1             10.108.0.2/20                     u/u
-lo               127.0.0.1/8                       u/u
-                 ::1/128</code></pre></div><p></p><h2><span contenteditable="false" class="heading-actions "></span><span class="heading-content">Set SSH services</span></h2><p>Configure the ssh service to be able to access VyOS via the local terminal.</p><div class="code-block with-line-numbers" data-language="javascript"><pre><code spellcheck="false">vyos@vyos# set service ssh port 22</code></pre></div><p></p><h2><span contenteditable="false" class="heading-actions "></span><span class="heading-content">Configure site-to-site VPN on Right (SGP1 Region)</span></h2><div class="code-block with-line-numbers" data-language="javascript"><pre><code spellcheck="false">ipsec {
-     esp-group to-nyc {
-         lifetime 86400
-         mode tunnel
-         pfs enable
-         proposal 1 {
-             encryption aes256
-             hash sha256
-         }
-     }
-     ike-group to-nyc {
-         key-exchange ikev2
-         lifetime 86400
-         proposal 1 {
-             dh-group 14
-             encryption aes256
-             hash sha256
-         }
-     }
-     interface eth0
-     site-to-site {
-         peer to-nyc {
-             authentication {
-                 local-id 159.223.59.74
-                 mode pre-shared-secret
-                 pre-shared-secret P@ssw0rd123!
-                 remote-id 134.209.174.36
-             }
-             ike-group to-nyc
-             local-address any
-             remote-address 134.209.174.36
-             tunnel 0 {
-                 esp-group to-nyc
-                 local {
-                     prefix 10.104.0.0/20
-                 }
-                 remote {
-                     prefix 10.108.0.0/20
-                 }
-             }
-         }
-     }
- }</code></pre></div><p></p><h2><span contenteditable="false" class="heading-actions "></span><span class="heading-content">Configure site-to-site VPN on Left (NYC3 Region)</span></h2><div class="code-block with-line-numbers" data-language="javascript"><pre><code spellcheck="false">ipsec {
-     esp-group to-sgp {
-         lifetime 86400
-         mode tunnel
-         pfs enable
-         proposal 1 {
-             encryption aes256
-             hash sha256
-         }
-     }
-     ike-group to-sgp {
-         key-exchange ikev2
-         lifetime 86400
-         proposal 1 {
-             dh-group 14
-             encryption aes256
-             hash sha256
-         }
-     }
-     interface eth0
-     site-to-site {
-         peer to-sgp {
-             authentication {
-                 local-id 134.209.174.36
-                 mode pre-shared-secret
-                 pre-shared-secret P@ssw0rd123!
-                 remote-id 159.223.59.74
-             }
-             ike-group to-sgp
-             local-address any
-             remote-address 159.223.59.74
-             tunnel 0 {
-                 esp-group to-sgp
-                 local {
-                     prefix 10.108.0.0/20
-                 }
-                 remote {
-                     prefix 10.104.0.0/20
-                 }
-             }
-         }
-     }
- }</code></pre></div><p></p><h2><span contenteditable="false" class="heading-actions "></span><span class="heading-content">Show VPN Status</span></h2><p>Show VPN status on SGP region</p><div class="code-block with-line-numbers" data-language="javascript"><pre><code spellcheck="false">vyos@vyos# run show vpn ipsec connections
-Connection       State    Type    Remote address    Local TS       Remote TS      Local id       Remote id       Proposal
----------------  -------  ------  ----------------  -------------  -------------  -------------  --------------  ---------------------------------------
-to-drc           up       IKEv2   134.209.174.36    -              -              159.223.59.74  134.209.174.36  AES_CBC/256/HMAC_SHA2_256_128/MODP_2048
-to-drc-tunnel-0  up       IPsec   134.209.174.36    10.104.0.0/20  10.108.0.0/20  159.223.59.74  134.209.174.36  AES_CBC/256/HMAC_SHA2_256_128/MODP_2048</code></pre></div><p></p><p>Show VPN status on NYC region</p><div class="code-block with-line-numbers" data-language="javascript"><pre><code spellcheck="false">vyos@vyos# run show vpn ipsec connections
-Connection      State    Type    Remote address    Local TS       Remote TS      Local id        Remote id      Proposal
---------------  -------  ------  ----------------  -------------  -------------  --------------  -------------  ---------------------------------------
-to-ho           up       IKEv2   159.223.59.74     -              -              134.209.174.36  159.223.59.74  AES_CBC/256/HMAC_SHA2_256_128/MODP_2048
-to-ho-tunnel-0  up       IPsec   159.223.59.74     10.108.0.0/20  10.104.0.0/20  134.209.174.36  159.223.59.74  AES_CBC/256/HMAC_SHA2_256_128/MODP_2048</code></pre></div><p></p><h2><span contenteditable="false" class="heading-actions "></span><span class="heading-content">Test VPN Connection</span></h2><p>Ping to NYC region private IP from SGP region</p><div class="code-block with-line-numbers" data-language="javascript"><pre><code spellcheck="false">vyos@vyos# ping 10.108.0.2
-PING 10.108.0.2 (10.108.0.2) 56(84) bytes of data.
-64 bytes from 10.108.0.2: icmp_seq=1 ttl=64 time=239 ms
-64 bytes from 10.108.0.2: icmp_seq=2 ttl=64 time=236 ms
-64 bytes from 10.108.0.2: icmp_seq=3 ttl=64 time=237 ms
-64 bytes from 10.108.0.2: icmp_seq=4 ttl=64 time=237 ms
-^C
---- 10.108.0.2 ping statistics ---
-4 packets transmitted, 4 received, 0% packet loss, time 3004ms
-rtt min/avg/max/mdev = 236.405/237.125/238.856/1.003 ms</code></pre></div><p></p><p>Ping to SGP region private IP from NYC region</p><div class="code-block with-line-numbers" data-language="javascript"><pre><code spellcheck="false">vyos@vyos# ping 10.104.0.3
-PING 10.104.0.3 (10.104.0.3) 56(84) bytes of data.
-64 bytes from 10.104.0.3: icmp_seq=1 ttl=64 time=236 ms
-64 bytes from 10.104.0.3: icmp_seq=2 ttl=64 time=237 ms
-64 bytes from 10.104.0.3: icmp_seq=3 ttl=64 time=236 ms
-64 bytes from 10.104.0.3: icmp_seq=4 ttl=64 time=236 ms
-^C
---- 10.104.0.3 ping statistics ---
-4 packets transmitted, 4 received, 0% packet loss, time 3005ms
-rtt min/avg/max/mdev = 236.169/236.409/236.606/0.156 ms</code></pre></div><p></p></div></div></article></body></html>
+.fyrFtf{max-width:46em;margin:0 auto;padding:0 1em;}/*!sc*/
+data-styled.g56[id="sc-bXCLTC"]{content:"fyrFtf,"}/*!sc*/
+</style></head><body><article class="sc-bXCLTC fyrFtf"><h1 dir="ltr">Deploy Outline Wiki on Docker Compose</h1><div dir="ltr" class="Styles__EditorContainer-sc-1ggx691-0 hvDZkC"><div id="content" class="ProseMirror"><h3><span contenteditable="false" class="heading-actions "></span><span class="heading-content">Outline Wiki is a documentation platform that can be self-hosted, here Docker Compose is used to host Outline Wiki</span></h3><p></p><p><div class="image"><img src="public/782b2627-cd78-4530-a037-b024fb95bd5f/e417ed7f-2da4-4189-9fa0-6d871398ea57/DOCKER%20COMPOSE%20OUTLINE%20WIKI%20(1).jpg" contenteditable="false"><p class="caption"></p></div></p><p></p><div class="notice-block info"><div class="content"><p>Tech Stack</p></div></div><ul><li><p>Docker Compose</p></li><li><p>PostgreSQL</p></li><li><p>Redis</p></li><li><p>Docker</p></li><li><p>Slack</p></li><li><p>Nginx Proxy Manager</p></li><li><p>Minio</p></li></ul><p></p><div class="notice-block warning"><div class="content"><p>Common Problems</p></div></div><ul><li><p>Error when creating and migrating db, Solution: make sure the docker.env file for the DATABASE_URL environment is correct</p></li><li><p>Upload Error when attaching media, Solution: configure a domain for S3 API with (HTTPS), an example set s3.regiapriandi.com (HTTPS) point to localhost:9000 (S3 API)</p></li><li><p></p></li></ul><p></p><h2><span contenteditable="false" class="heading-actions "></span><span class="heading-content">Configure Slack for Authentication</span></h2><p>To be able to integrate Slack with the wiki outline, you can follow the following link <a href="https://docs.getoutline.com/s/hosting/doc/slack-sgMujR8J9J" class="use-hover-preview" rel="noopener noreferrer nofollow">https://docs.getoutline.com/s/hosting/doc/slack-sgMujR8J9J</a>, then get <code class="inline" spellcheck="false">SLACK_CLIENT_ID</code>, <code class="inline" spellcheck="false">SLACK_CLIENT_SECRET</code>, <code class="inline" spellcheck="false">SLACK_VERIFICATION_TOKEN</code>, and <code class="inline" spellcheck="false">SLACK_APP_ID</code> from basic information about the application.</p><p></p><h2><span contenteditable="false" class="heading-actions "></span><span class="heading-content">Creating a Secret Key for Outline Environment</span></h2><div class="code-block with-line-numbers" data-language="javascript"><pre><code spellcheck="false">$ openssl rand -hex 32
+c26a3b6a9ad56731726104e4eff94c59f5af48dace16941424b27960880d3412</code></pre></div><p></p><h2><span contenteditable="false" class="heading-actions "></span><span class="heading-content">Create Docker Compose configuration</span></h2><div class="code-block with-line-numbers" data-language="yaml"><pre><code spellcheck="false">version: "3.2"
+services:
+
+  outline:
+    image: docker.getoutline.com/outlinewiki/outline:latest
+    env_file: ./docker.env
+    ports:
+      - "3000:3000"
+    depends_on:
+      - redis
+      - storage
+      - db
+   
+  db:
+    image: postgres
+    ports:
+      - "5432:5432"
+    volumes:
+      - ./data/db:/var/lib/postgresql/data
+    environment:
+      - POSTGRES_DB=postgres
+      - POSTGRES_USER=regiapriandi
+      - POSTGRES_PASSWORD=@Sinheul24.  
+
+  redis:
+    image: redis
+    env_file: ./docker.env
+    ports:
+      - "6379:6379"
+    volumes:
+      - ./redis.conf:/redis.conf
+    command: ["redis-server", "/redis.conf"]
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 30s
+      retries: 3
+
+  storage:
+    image: minio/minio
+    env_file: ./docker.env
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    entrypoint: sh
+    command: -c 'minio server /data --console-address :9001'
+    deploy:
+      restart_policy:
+        condition: on-failure
+    volumes:
+      - ~/minio/data:/data
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      interval: 30s
+      timeout: 20s
+      retries: 3</code></pre></div><p></p><h2><span contenteditable="false" class="heading-actions "></span><span class="heading-content">Create a configuration for docker.env</span></h2><div class="code-block with-line-numbers" data-language="bash"><pre><code spellcheck="false">NODE_ENV=production
+
+SECRET_KEY=c26a3b6a9ad56731726104e4eff94c59f5af48dace16941424b27960880d3412
+
+UTILS_SECRET=c26a3b6a9ad56731726104e4eff94c59f5af48dace16941424b27960880d3412
+
+DATABASE_URL=postgres://outline_user:sinheul24@103.186.65.63:5432/outline
+PGSSLMODE=disable
+
+REDIS_URL=redis://103.186.65.63:6379
+
+URL=https://docs.regiapriandi.com
+PORT=3000
+
+FORCE_HTTPS=true
+
+GOOGLE_CLIENT_ID=543570070141-7qtu7c21oun75o94gjmai47m6rmul26f.apps.googleusercontent.com
+
+GOOGLE_CLIENT_SECRET=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
+
+# This is called "Client ID" in Slack
+SLACK_CLIENT_ID=5919003813441.5908820732116
+
+# This is called "Client Secret" in Slack
+SLACK_CLIENT_SECRET=9e25e4f66b3d2635d8c9ba30ac663eab
+
+SLACK_VERIFICATION_TOKEN=F00PjEhOlFJHuS6avhBzAFPJ
+SLACK_APP_ID=A05SQQ4MJ3E
+SLACK_MESSAGE_ACTIONS=true
+
+MINIO_ROOT_USER=minio
+MINIO_ROOT_PASSWORD=sinheul24
+MINIO_BROWSER_REDIRECT_URL=https://s3-admin.regiapriandi.com
+
+AWS_ACCESS_KEY_ID=minio
+#AWS_REGION=us-east-1
+AWS_SECRET_ACCESS_KEY=sinheul24
+AWS_S3_UPLOAD_BUCKET_URL=https://s3.regiapriandi.com
+AWS_S3_UPLOAD_BUCKET_NAME=outline-bucket
+AWS_S3_ACL=public-read
+
+SMTP_HOST=mail.regiapriandi.com
+SMTP_PORT=587
+SMTP_FROM_EMAIL=docs@regiapriandi.com
+SMTP_SECURE=false</code></pre></div><p></p><h2><span contenteditable="false" class="heading-actions "></span><span class="heading-content">Deploy Docker Compose</span></h2><div class="code-block with-line-numbers" data-language="javascript"><pre><code spellcheck="false">$ docker-compose up -d --remove-orphans
+root@mail:/var/lib/jenkins/workspace/regiapriandi.com-blog# docker ps | grep outline
+04fd577a4a1d   minio/minio                                        "sh -c 'minio server…"   4 weeks ago    Up 2 weeks (healthy)   0.0.0.0:9000-9001-&gt;9000-9001/tcp, :::9000-9001-&gt;9000-9001/tcp                          outline-wiki_storage_1
+97262a105847   docker.getoutline.com/outlinewiki/outline:latest   "docker-entrypoint.s…"   4 weeks ago    Up 2 weeks             0.0.0.0:3000-&gt;3000/tcp, :::3000-&gt;3000/tcp                                              outline-wiki_outline_1
+30a73d8bfe1f   redis                                              "docker-entrypoint.s…"   4 weeks ago    Up 2 weeks (healthy)   0.0.0.0:6379-&gt;6379/tcp, :::6379-&gt;6379/tcp                                              outline-wiki_redis_1</code></pre></div><p></p></div></div></article></body></html>
